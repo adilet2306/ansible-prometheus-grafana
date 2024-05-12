@@ -1,0 +1,82 @@
+---
+- name: Install Prometheus and Node Exporter on Ubuntu 22
+  hosts: all
+  become: yes
+  tasks:
+    # Existing Prometheus installation tasks go here...
+
+    - name: Create Node Exporter user
+      user:
+        name: node_exporter
+        system: yes
+        create_home: no
+        shell: /bin/false
+
+    - name: Download Node Exporter tarball
+      get_url:
+        url: https://github.com/prometheus/node_exporter/releases/download/v1.6.1/node_exporter-1.6.1.linux-amd64.tar.gz
+        dest: /tmp/node_exporter-1.6.1.linux-amd64.tar.gz
+        mode: '0644'
+
+    - name: Extract Node Exporter tarball
+      unarchive:
+        src: /tmp/node_exporter-1.6.1.linux-amd64.tar.gz
+        dest: /tmp
+        remote_src: yes
+        creates: /tmp/node_exporter-1.6.1.linux-amd64
+
+    - name: Move Node Exporter binary to /usr/local/bin
+      command: mv /tmp/node_exporter-1.6.1.linux-amd64/node_exporter /usr/local/bin/
+      args:
+        creates: /usr/local/bin/node_exporter
+
+    - name: Setup Node Exporter service
+      copy:
+        dest: /etc/systemd/system/node_exporter.service
+        content: |
+          [Unit]
+          Description=Node Exporter
+          Wants=network-online.target
+          After=network-online.target
+          
+          StartLimitIntervalSec=500
+          StartLimitBurst=5
+          
+          [Service]
+          User=node_exporter
+          Group=node_exporter
+          Type=simple
+          Restart=on-failure
+          RestartSec=5s
+          ExecStart=/usr/local/bin/node_exporter \
+            --collector.logind
+          
+          [Install]
+          WantedBy=multi-user.target
+        mode: '0644'
+
+    - name: Reload systemd to pick up Node Exporter service
+      systemd:
+        daemon_reload: yes
+
+    - name: Enable and start Node Exporter service
+      systemd:
+        name: node_exporter
+        enabled: yes
+        state: started
+
+    - name: Add Node Exporter job configuration to Prometheus
+      blockinfile:
+        path: /etc/prometheus/prometheus.yml
+        block: |
+            - job_name: 'node_export'
+              static_configs:
+                - targets: ["localhost:9100"]
+        marker: "# {mark} ANSIBLE MANAGED BLOCK"
+        insertafter: "scrape_configs:$"
+        create: no
+
+    - name: Reload Prometheus configuration
+      uri:
+        url: http://localhost:9090/-/reload
+        method: POST

@@ -1,0 +1,37 @@
+---
+- name: Install Prometheus, Node Exporter, and Grafana on Ubuntu 22
+  hosts: all
+  become: yes
+  tasks:
+    # Previous tasks for Prometheus and Node Exporter setup go here...
+
+    - name: Install prerequisites for Grafana
+      apt:
+        name:
+          - apt-transport-https
+          - software-properties-common
+        state: present
+        update_cache: yes
+
+    - name: Add Grafana GPG key
+      apt_key:
+        url: https://packages.grafana.com/gpg.key
+        state: present
+
+    - name: Add Grafana repository
+      apt_repository:
+        repo: deb https://packages.grafana.com/oss/deb stable main
+        filename: grafana
+        state: present
+
+    - name: Install Grafana
+      apt:
+        name: grafana
+        state: latest
+        update_cache: yes
+
+    - name: Enable and start Grafana service
+      systemd:
+        name: grafana-server
+        enabled: yes
+        state: started

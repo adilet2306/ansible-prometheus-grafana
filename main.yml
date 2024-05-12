@@ -1,0 +1,106 @@
+---
+- name: Install Prometheus on Ubuntu 22
+  hosts: all
+  become: yes
+  tasks:
+    - name: Create Prometheus user
+      user:
+        name: prometheus
+        system: yes
+        create_home: no
+        shell: /bin/false
+
+    - name: Download Prometheus tarball
+      get_url:
+        url: https://github.com/prometheus/prometheus/releases/download/v2.45.0/prometheus-2.45.0.linux-amd64.tar.gz
+        dest: /tmp/prometheus-2.45.0.linux-amd64.tar.gz
+        mode: '0644'
+
+    - name: Extract Prometheus tarball
+      unarchive:
+        src: /tmp/prometheus-2.45.0.linux-amd64.tar.gz
+        dest: /tmp
+        remote_src: yes
+        creates: /tmp/prometheus-2.45.0.linux-amd64
+
+    - name: Create necessary directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: prometheus
+        group: prometheus
+      loop:
+        - /data
+        - /etc/prometheus
+
+    - name: Move binaries to /usr/local/bin
+      command: mv /tmp/prometheus-2.45.0.linux-amd64/{{ item }} /usr/local/bin/
+      args:
+        creates: /usr/local/bin/{{ item }}
+      loop:
+        - prometheus
+        - promtool
+
+    - name: Move consoles and console_libraries
+      command: mv /tmp/prometheus-2.45.0.linux-amd64/{{ item }} /etc/prometheus/
+      args:
+        creates: /etc/prometheus/{{ item }}
+      loop:
+        - consoles
+        - console_libraries
+
+    - name: Move prometheus.yml to /etc/prometheus
+      command: mv /tmp/prometheus-2.45.0.linux-amd64/prometheus.yml /etc/prometheus/
+      args:
+        creates: /etc/prometheus/prometheus.yml
+
+    - name: Set ownership for /etc/prometheus and /data
+      file:
+        path: "{{ item }}"
+        owner: prometheus
+        group: prometheus
+        recurse: yes
+      loop:
+        - /etc/prometheus
+        - /data
+
+    - name: Setup Prometheus service
+      copy:
+        dest: /etc/systemd/system/prometheus.service
+        content: |
+          [Unit]
+          Description=Prometheus
+          Wants=network-online.target
+          After=network-online.target
+          
+          StartLimitIntervalSec=500
+          StartLimitBurst=5
+          
+          [Service]
+          User=prometheus
+          Group=prometheus
+          Type=simple
+          Restart=on-failure
+          RestartSec=5s
+          ExecStart=/usr/local/bin/prometheus \
+            --config.file=/etc/prometheus/prometheus.yml \
+            --storage.tsdb.path=/data \
+            --web.console.templates=/etc/prometheus/consoles \
+            --web.console.libraries=/etc/prometheus/console_libraries \
+            --web.listen-address=0.0.0.0:9090 \
+            --web.enable-lifecycle
+          
+          [Install]
+          WantedBy=multi-user.target
+          
+        mode: '0644'
+
+    - name: Reload systemd to pick up Prometheus service
+      systemd:
+        daemon_reload: yes
+
+    - name: Enable and start Prometheus service
+      systemd:
+        name: prometheus
+        enabled: yes
+        state: started
