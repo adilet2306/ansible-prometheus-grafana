@@ -22,7 +22,13 @@ function paste_ip() {
     sed -i "s/ansible_host=[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}/ansible_host=$IP/" ../ansible/hosts
 }
 
+function run_ansible() {
+    cd ../ansible
+    ansible-playbook main.yml
+}
+
 
 prepare_bastion
 create_instances
 paste_ip
+run_ansible

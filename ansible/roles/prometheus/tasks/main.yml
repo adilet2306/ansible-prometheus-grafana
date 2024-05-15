@@ -1,0 +1,50 @@
+- name: Add the user prometheus
+  ansible.builtin.user:
+    name: prometheus
+    shell: /bin/false
+    system: true
+    create_home: no
+
+- name: Download prometheus
+  ansible.builtin.get_url:
+    url: https://github.com/prometheus/prometheus/releases/download/v2.45.0/prometheus-2.45.0.linux-amd64.tar.gz
+    dest: /tmp/prometheus.tar.gz
+
+- name: Unarchive prometheus
+  ansible.builtin.unarchive:
+    src: /tmp/prometheus.tar.gz
+    dest: /tmp
+    remote_src: yes
+
+- name: Create directories for prometheus
+  ansible.builtin.file:
+    path: "{{ item }}"
+    owner: prometheus
+    group: prometheus
+    state: directory
+  loop:
+    - /data
+    - /etc/prometheus
+
+- name: Copy file prometheus and promtool
+  ansible.builtin.copy:
+    src: /tmp/prometheus-2.45.0.linux-amd64/{{ item }}
+    dest: /usr/local/bin
+    remote_src: yes
+    mode: '755'
+  loop:
+    - prometheus
+    - promtool
+
+- name: Copy file with owner and permissions
+  ansible.builtin.copy:
+    src: /tmp/prometheus-2.45.0.linux-amd64/{{ item }}
+    dest: /etc/prometheus
+    remote_src: yes
+    owner: prometheus
+    group: prometheus
+  loop:
+    - consoles
+    - console_libraries
+    - prometheus.yml
+
