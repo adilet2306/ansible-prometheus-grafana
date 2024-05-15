@@ -1,0 +1,1 @@
+monitoring ansible_user=ubuntu ansible_host=10.0.0.0
