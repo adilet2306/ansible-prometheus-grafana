@@ -48,3 +48,13 @@
     - console_libraries
     - prometheus.yml
 
+- name: Template a file to /etc/file.conf
+  ansible.builtin.template:
+    src: /home/ubuntu/ansible-prometheus-grafana/ansible/roles/prometheus/templates/prometheus.service.j2
+    dest: /etc/systemd/system/prometheus.service
+
+- name: Make sure a service unit is running
+  ansible.builtin.systemd:
+    state: started
+    name: prometheus
+    enabled: yes
