@@ -1,11 +1,19 @@
-# ansible-prometheus-grafana
+# Setup Instructions
 
-Create AWS access and secret key with right permissions to create vpc and ec2
-Run
-`export AWS_ACCESS_KEY_ID="your_access_key"`
-`export AWS_SECRET_ACCESS_KEY="your_secret_access_key"`
+To get started, follow these steps:
 
-Create terraform.tfvars in terraform folder
+1. **Create AWS Access and Secret Key**
+   - Ensure you have the right permissions to create a VPC and EC2 instances.
+
+2. **Set Environment Variables**
+   Run the following commands in your terminal to set up the necessary environment variables:
+
+   ```bash
+   export AWS_ACCESS_KEY_ID="your_access_key"
+   export AWS_SECRET_ACCESS_KEY="your_secret_access_key"
+
+
+3. **Create terraform.tfvars in terraform folder**
 
 ```hcl
 region = "us-east-2"
