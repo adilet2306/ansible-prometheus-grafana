@@ -31,4 +31,5 @@ function run_ansible() {
 prepare_bastion
 create_instances
 paste_ip
+sleep 30
 run_ansible
